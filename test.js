@@ -17,7 +17,7 @@ function allPossibleCases(arr) {
   }
 }
 
-function dump(nodes, subIndex, value) {
+function substitute(nodes, subIndex, value) {
   var result = '';
   for (let [i, node] of nodes.entries()) {
     if (i == subIndex ){
@@ -26,7 +26,7 @@ function dump(nodes, subIndex, value) {
       result += node[0];
     }
   }
-  console.log(result);
+  return result;
 }
 
 var gyous = [
@@ -76,6 +76,7 @@ function getSamePronounce(letter){
 class GagLator {
   translate(text){
     var nodes = mecab.parseSync(text);
+    var results = [];
 
     var targetIndex = null;
     var maxLength = 0;
@@ -111,14 +112,14 @@ class GagLator {
         for (var kouho of kouhos) {
           var res = mecab.parseSync(kouho);
           if (res.length == 1 && res[0][2] != '固有名詞') {
-            dump(nodes, targetIndex, res[0][0]);
+            results.push(substitute(nodes, targetIndex, res[0][0]));
           }          
         }
       }
     }
-    return [target];
+    return results;
   }  
 }
 
 var gag = new GagLator();
-gag.translate(process.argv.slice(2)[0]);
+console.log(gag.translate(process.argv.slice(2)[0]));
