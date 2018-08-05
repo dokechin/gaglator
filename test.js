@@ -75,6 +75,7 @@ function getSamePronounce(letter){
 }
 class GagLator {
   translate(text){
+    console.log(text)
     var nodes = mecab.parseSync(text);
     var results = [];
 
@@ -95,6 +96,7 @@ class GagLator {
     var myAry = Array.apply(null, { length }).map(function (undef, i) {
       return i;
   });
+    var asyncs = [];
     for (var i=0;i<length/2;i++){
       var substituteIndexs = Combinatorics.combination(myAry, i+1);
       var substituteIndex;
@@ -110,16 +112,31 @@ class GagLator {
         }
         var kouhos = allPossibleCases(array);
         for (var kouho of kouhos) {
-          var res = mecab.parseSync(kouho);
-          if (res.length == 1 && res[0][2] != '固有名詞') {
-            results.push(substitute(nodes, targetIndex, res[0][0]));
-          }          
-        }
+           asyncs.push (new Promise((resolve, reject) => {
+            mecab.parse(kouho, function(err,result){
+              var sub = null;
+              if (result && result.length == 1 && result[0][2] != '固有名詞') {
+
+                sub = substitute(nodes, targetIndex, result[0][0])
+              }
+
+              resolve(sub);
+            });    
+          }));
+        }     
       }
     }
-    return results;
-  }  
-}
+    var promise = new Promise( function (resolve, reject) {
+      Promise.all(asyncs).then(
+        function(values){
+          const result = values.filter(word => word != null);
+          resolve(result);
+        }
+      )
+    })
+    return promise;
+  }
+}  
 
 var gag = new GagLator();
-console.log(gag.translate(process.argv.slice(2)[0]));
+gag.translate(process.argv.slice(2)[0]).then(function (result){console.log(result)});
