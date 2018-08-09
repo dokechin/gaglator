@@ -1,6 +1,42 @@
 var MeCab = new require('mecab-async')
   , mecab = new MeCab();
 var Combinatorics = require('js-combinatorics');
+var Es6PromisePool = require('es6-promise-pool');
+
+/**
+ * Promise Pool
+ *
+ * Extends the es6-promise-pool class to enable it to function much
+ * like Promise.all() functions by returning the array of results.
+ */
+class PromisePool extends Es6PromisePool {
+  /**
+   * Constructor
+   *
+   * @param {Function} source - function to generate data
+   * @param {Number} concurrency - amount of concurrency
+   * @param {Object} options - key value pairs of options
+   */
+  constructor(source, concurrency, options) {
+    super(source, concurrency, options);
+    this.resolves = [];
+  }
+
+  /**
+   * Start
+   *
+   * @return {Promise}
+   */
+  start() {
+    this.addEventListener('fulfilled', (event) => {
+      this.resolves.push(event.data.result);
+    });
+
+    return super.start().then(() => {
+      return Promise.resolve(this.resolves);
+    });
+  }
+}
 
 function allPossibleCases(arr) {
   if (arr.length == 1) {
@@ -41,12 +77,17 @@ var gyous = [
   ['ワ', 'ヲ']
 ];
 var dans = [
-  ['ア', 'カ', 'サ', 'タ', 'ナ', 'ハ', 'マ', 'ヤ', 'ラ', 'ワ', 'キャ', 'シャ', 'チャ', 'ニャ', 'ヒャ', 'ミャ', 'リャ', 'バ' , 'パ' , 'パ'
-],
-  ['イ', 'キ', 'シ', 'チ', 'ニ', 'ヒ', 'ミ',       'リ'],
-  ['ウ', 'ク', 'ス', 'ツ', 'ヌ', 'フ', 'ム', 'ユ', 'ル'],
-  ['エ', 'ケ', 'セ', 'テ', 'ネ', 'ヘ', 'メ',       'レ'],
-  ['オ', 'コ', 'ソ', 'ト', 'ノ', 'ホ', 'モ', 'ヨ', 'ロ', 'ヲ']
+  ['ア', 'カ', 'サ', 'タ', 'ナ', 'ハ', 'マ', 'ヤ', 'ラ', 'ワ', 
+  'キャ', 'シャ', 'チャ', 'ニャ', 'ヒャ', 'ミャ', 'リャ', 
+  'ガ', 'ザ', 'ダ', 'バ', 'パ' , 'ダ'],
+  ['イ', 'キ', 'シ', 'チ', 'ニ', 'ヒ', 'ミ',       'リ',
+   'ギ', 'ジ', 'ヂ' ,'ビ', 'ピ'],
+  ['ウ', 'ク', 'ス', 'ツ', 'ヌ', 'フ', 'ム', 'ユ', 'ル',
+   'グ', 'ズ', 'ブ', 'プ'],
+  ['エ', 'ケ', 'セ', 'テ', 'ネ', 'ヘ', 'メ',       'レ',
+   'ゲ', 'ゼ', 'デ', 'ベ', 'ペ'],
+  ['オ', 'コ', 'ソ', 'ト', 'ノ', 'ホ', 'モ', 'ヨ', 'ロ', 'ヲ',
+   'ゴ', 'ゾ', 'ド', 'ボ', 'ポ']
 ];
 
 function getSamePronounce(letter){
@@ -74,6 +115,7 @@ function getSamePronounce(letter){
   return value;
 }
 class GagLator {
+
   translate(text){
     console.log(text)
     var nodes = mecab.parseSync(text);
@@ -97,46 +139,72 @@ class GagLator {
       return i;
   });
     var asyncs = [];
+    var kouhoSet = new Set();
     for (var i=0;i<length/2;i++){
       var substituteIndexs = Combinatorics.combination(myAry, i+1);
       var substituteIndex;
       while ( substituteIndex = substituteIndexs.next()){
+
         var array = [];
         for (var j=0; j<length; j++){
           if (substituteIndex.indexOf(j) >= 0) {
-            array.push(getSamePronounce(target[j]));
+            var same = getSamePronounce(target[j]);
+            if (same.length == 0 ){
+              array.push(target[j]);
+            } else {
+              array.push(same);
+            }            
           }
           else{
             array.push(target[j]);
           }
         }
-        var kouhos = allPossibleCases(array);
-        for (var kouho of kouhos) {
-           asyncs.push (new Promise((resolve, reject) => {
-            mecab.parse(kouho, function(err,result){
-              var sub = null;
-              if (result && result.length == 1 && result[0][2] != '固有名詞') {
-
-                sub = substitute(nodes, targetIndex, result[0][0])
-              }
-
-              resolve(sub);
-            });    
-          }));
-        }     
+        for(var element of allPossibleCases(array)){
+          kouhoSet.add(element);
+        }
       }
     }
+  
+    var promiseProducer;
+    var index = 0;
+    var kouhoArray = [...kouhoSet];
+
+    promiseProducer = function () {
+
+      if (index >= kouhoSet.size){
+        return null;
+      }
+      return new Promise((resolve, reject) => {
+        mecab.parse(kouhoArray[index++], function(err,result){
+          var sub = null;
+          if (result && result.length == 1 && result[0][1] == '名詞' && 
+          !(result[0][2] == '固有名詞' && (result[0][3] == '地域' || result[0][3] == '組織' || result[0][3] == '人名'))) {
+            sub = substitute(nodes, targetIndex, result[0][0])
+          } 
+          resolve(sub);
+        })
+      })     
+    };
+
     var promise = new Promise( function (resolve, reject) {
-      Promise.all(asyncs).then(
-        function(values){
-          const result = values.filter(word => word != null);
+
+      var pool = new PromisePool(promiseProducer, 15);
+
+      pool.start().then(
+        function(results){
+          // returen values in this.resolves
+          const result = results.filter(word => word != null);
           resolve(result);
         }
-      )
+      )  
+
     })
     return promise;
   }
 }  
+
+//var nodes = mecab.parseSync('カマキリ');
+//console.log(nodes);
 
 var gag = new GagLator();
 gag.translate(process.argv.slice(2)[0]).then(function (result){console.log(result)});
