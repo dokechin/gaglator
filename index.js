@@ -216,5 +216,7 @@ class GagLator {
   }
 }  
 
+module.exports = gagLator;
+
 var gag = new GagLator();
 gag.translate(process.argv.slice(2)[0]).then(function (result){console.log(result)});
