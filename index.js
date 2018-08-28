@@ -56,12 +56,13 @@ class GagLator {
     static get DANS() {
     return  [
       ['ア', 'カ', 'サ', 'タ', 'ナ', 'ハ', 'マ', 'ヤ', 'ラ', 'ワ', 
-      'キャ', 'シャ', 'チャ', 'ニャ', 'ヒャ', 'ミャ', 'リャ', 
-      'ガ', 'ザ', 'ダ', 'バ', 'パ' , 'ダ'],
+      'キャ', 'シャ', 'チャ', 'ニャ', 'ヒャ', 'ミャ', 'リャ',
+      'ガ', 'ザ', 'ダ', 'バ', 'パ' , 'ダ',
+      'ギャ', 'ジャ'],
       ['イ', 'キ', 'シ', 'チ', 'ニ', 'ヒ', 'ミ',       'リ',
        'ギ', 'ジ', 'ヂ' ,'ビ', 'ピ'],
       ['ウ', 'ク', 'ス', 'ツ', 'ヌ', 'フ', 'ム', 'ユ', 'ル',
-       'グ', 'ズ', 'ブ', 'プ'],
+       'グ', 'ズ', 'ヅ', 'ブ', 'プ'],
       ['エ', 'ケ', 'セ', 'テ', 'ネ', 'ヘ', 'メ',       'レ',
        'ゲ', 'ゼ', 'デ', 'ベ', 'ペ'],
       ['オ', 'コ', 'ソ', 'ト', 'ノ', 'ホ', 'モ', 'ヨ', 'ロ', 'ヲ',
@@ -70,13 +71,13 @@ class GagLator {
   }
   
   static getSamePronounce(letter){
-    var value = [];
+    var set = new Set();
     for (let gyou of GagLator.GYOUS) {
       var index = gyou.indexOf(letter);
       if (index >=0){
         for (let [i, word] of gyou.entries() ){
           if (i != index) {
-            value.push(word);
+            set.add(word);
           }
         }
       }
@@ -86,12 +87,12 @@ class GagLator {
       if (index >=0){
         for (let [i, word] of dan.entries() ){
           if (i != index) {
-            value.push(word);
+            set.add(word);
           }
         }
       }
     }
-    return value;
+    return set;
   }
 
   static allPossibleCases(arr) {
@@ -156,7 +157,7 @@ class GagLator {
             if (same.length == 0 ){
               array.push(target[j]);
             } else {
-              array.push(same);
+              array.push([...same]);
             }            
           }
           else{
@@ -216,7 +217,4 @@ class GagLator {
   }
 }  
 
-module.exports = gagLator;
-
-var gag = new GagLator();
-gag.translate(process.argv.slice(2)[0]).then(function (result){console.log(result)});
+module.exports = GagLator; 

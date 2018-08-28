@@ -1,20 +1,18 @@
 # gaglator
 
-Japanese gag generator.
+Japanese oyaji gag generator.
+
 This program depends on mecab.
 http://taku910.github.io/mecab/#download
 
 ## synopsys
 ```
-npm install
-node test.js 猫に小判
-猫に小判
-[ '猫にカバン',
-  '猫にロビン',
-  '猫にカカン',
-  '猫にガタン',
-  '猫にトタン',
-  '猫にガマン',
-  '猫にロマン',
-  '猫にカラン' ]
+  var gag = new GagLator();
+  gag.translate('猫に小判').then(function (res){
+    console.log(res);
+    // ['猫にカバン', '猫にゴハン', '猫にロビン', '猫にボビン', '猫にカカン',
+    //  '猫にトタン', '猫にボタン', '猫にガマン', '猫にロマン', '猫にカバン',
+    //  '猫にカラン', '猫にモダン']
+  });
+
  ```
